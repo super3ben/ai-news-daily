@@ -1,5 +1,4 @@
 # tests/test_collector.py
-from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock
 from src.collector import collect_rss, collect_search, collect_all
 
@@ -28,6 +27,16 @@ def test_collect_rss_returns_standard_items():
     assert items[0]["source_type"] == "rss"
 
 
+def test_collect_rss_published_is_utc_isoformat():
+    sources = [{"name": "TestFeed", "url": "https://example.com/rss"}]
+    feed = MagicMock()
+    # (2026, 4, 8, 10, 0, 0, 0, 0, 0) in UTC = "2026-04-08T10:00:00+00:00"
+    feed.entries = [_make_feed_entry("Title", "https://example.com/1", (2026, 4, 8, 10, 0, 0, 0, 0, 0))]
+    with patch("src.collector.feedparser.parse", return_value=feed):
+        items = collect_rss(sources)
+    assert items[0]["published"] == "2026-04-08T10:00:00+00:00"
+
+
 def test_collect_rss_returns_empty_for_empty_feed():
     sources = [{"name": "EmptyFeed", "url": "https://example.com/rss"}]
     feed = MagicMock()
@@ -42,6 +51,33 @@ def test_collect_rss_handles_parse_exception():
     with patch("src.collector.feedparser.parse", side_effect=Exception("timeout")):
         items = collect_rss(sources)
     assert items == []
+
+
+def test_collect_rss_skips_malformed_entry_keeps_good_entries():
+    """A single malformed entry must not discard valid entries from the same source."""
+    import types
+
+    sources = [{"name": "TestFeed", "url": "https://example.com/rss"}]
+    good_entry = _make_feed_entry("Good Title", "https://example.com/good")
+
+    # Use a plain object whose .title attribute raises AttributeError
+    class BadEntry:
+        published_parsed = None
+        link = "https://example.com/bad"
+
+        @property
+        def title(self):
+            raise AttributeError("no title")
+
+        def get(self, key, default=""):
+            return default
+
+    feed = MagicMock()
+    feed.entries = [BadEntry(), good_entry]
+    with patch("src.collector.feedparser.parse", return_value=feed):
+        items = collect_rss(sources)
+    assert len(items) == 1
+    assert items[0]["title"] == "Good Title"
 
 
 def test_collect_search_returns_standard_items():

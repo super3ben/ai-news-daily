@@ -15,19 +15,22 @@ def collect_rss(sources: list[dict]) -> list[dict]:
         try:
             feed = feedparser.parse(source["url"])
             for entry in feed.entries:
-                published = None
-                if hasattr(entry, "published_parsed") and entry.published_parsed:
-                    published = datetime.fromtimestamp(
-                        timegm(entry.published_parsed), tz=timezone.utc
-                    ).isoformat()
-                items.append({
-                    "title": entry.title,
-                    "url": entry.link,
-                    "source": source["name"],
-                    "published": published,
-                    "summary": entry.get("summary", ""),
-                    "source_type": "rss",
-                })
+                try:
+                    published = None
+                    if hasattr(entry, "published_parsed") and entry.published_parsed:
+                        published = datetime.fromtimestamp(
+                            timegm(entry.published_parsed), tz=timezone.utc
+                        ).isoformat()
+                    items.append({
+                        "title": entry.title,
+                        "url": entry.link,
+                        "source": source["name"],
+                        "published": published,
+                        "summary": entry.get("summary", ""),
+                        "source_type": "rss",
+                    })
+                except Exception as e:
+                    logger.warning(f"RSS [{source['name']}] skipping malformed entry: {e}")
             logger.info(f"RSS [{source['name']}]: collected {len(feed.entries)} entries")
         except Exception as e:
             logger.warning(f"RSS [{source['name']}] failed: {e}")
