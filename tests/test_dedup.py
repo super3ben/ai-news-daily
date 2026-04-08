@@ -71,3 +71,44 @@ def test_preprocess_caps_at_max_items():
     ]
     result = preprocess(items, max_age_days=3, max_items=80)
     assert len(result) == 80
+
+
+def test_preprocess_filters_old_naive_datetime():
+    """Naive datetime strings (no timezone) must still be age-filtered (treated as UTC)."""
+    now = datetime.now(timezone.utc)
+    items = [
+        {
+            "title": "Old Naive",
+            "url": "https://a.com/1",
+            "published": (now - timedelta(days=5)).replace(tzinfo=None).isoformat(),
+            "source_type": "rss",
+        },
+    ]
+    result = preprocess(items, max_age_days=3)
+    assert len(result) == 0
+
+
+def test_deduplicate_first_seen_wins():
+    """When two items share a URL, the first item in input order is kept."""
+    items = [
+        {"title": "First", "url": "https://example.com/1", "source": "X", "source_type": "rss"},
+        {"title": "Second", "url": "https://example.com/1", "source": "Y", "source_type": "rss"},
+    ]
+    result = deduplicate(items)
+    assert result[0]["title"] == "First"
+
+
+def test_deduplicate_skips_malformed_items():
+    """Items missing url or title are skipped rather than crashing."""
+    items = [
+        {"title": "Valid", "url": "https://a.com/1", "source": "X", "source_type": "rss"},
+        {"url": "https://b.com/1", "source": "Y", "source_type": "rss"},   # missing title
+        {"title": "No URL", "source": "Z", "source_type": "rss"},           # missing url
+    ]
+    result = deduplicate(items)
+    assert len(result) == 1
+    assert result[0]["title"] == "Valid"
+
+
+def test_normalize_url_strips_fragment():
+    assert normalize_url("https://example.com/page#section") == "https://example.com/page"

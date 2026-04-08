@@ -20,17 +20,23 @@ def deduplicate(items: list[dict], similarity_threshold: float = 0.7) -> list[di
     unique_items: list[dict] = []
 
     for item in items:
-        norm_url = normalize_url(item["url"])
+        url = item.get("url")
+        title = item.get("title")
+        if not url or not title:
+            logger.warning(f"Skipping malformed item missing url/title: {item}")
+            continue
+
+        norm_url = normalize_url(url)
         if norm_url in seen_urls:
-            logger.debug(f"URL duplicate removed: {item['title']}")
+            logger.debug(f"URL duplicate removed: {title}")
             continue
         seen_urls.add(norm_url)
 
         is_dup = False
         for existing in unique_items:
-            ratio = SequenceMatcher(None, item["title"].lower(), existing["title"].lower()).ratio()
+            ratio = SequenceMatcher(None, title.lower(), existing["title"].lower()).ratio()
             if ratio > similarity_threshold:
-                logger.debug(f"Title duplicate removed: '{item['title']}' ~ '{existing['title']}' ({ratio:.2f})")
+                logger.debug(f"Title duplicate removed: '{title}' ~ '{existing['title']}' ({ratio:.2f})")
                 is_dup = True
                 break
         if not is_dup:
@@ -60,6 +66,9 @@ def preprocess(
         if item.get("published"):
             try:
                 pub = datetime.fromisoformat(item["published"])
+                # Treat naive datetimes as UTC so age filtering is not silently bypassed
+                if pub.tzinfo is None:
+                    pub = pub.replace(tzinfo=timezone.utc)
                 if pub < cutoff:
                     continue
             except (ValueError, TypeError):
@@ -67,7 +76,8 @@ def preprocess(
 
         result.append(item)
 
-    result.sort(key=lambda x: x.get("published") or "", reverse=True)
+    # Sort newest-first; items without a published date sink to the end
+    result.sort(key=lambda x: x.get("published") or "0000", reverse=True)
 
     if len(result) > max_items:
         logger.warning(f"Capping items from {len(result)} to {max_items}")
