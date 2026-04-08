@@ -43,8 +43,9 @@ USER_PROMPT_TEMPLATE = """以下是今天采集到的 AI 相关新闻条目（JS
 
 def build_prompt(items: list[dict]) -> tuple[str, str]:
     items_for_prompt = [
-        {"title": item["title"], "url": item["url"], "summary": item.get("summary", "")}
+        {"title": item.get("title", ""), "url": item.get("url", ""), "summary": item.get("summary", "")}
         for item in items
+        if item.get("title") and item.get("url")
     ]
     items_json = json.dumps(items_for_prompt, ensure_ascii=False, indent=2)
     user_prompt = USER_PROMPT_TEMPLATE.format(items_json=items_json)
@@ -52,6 +53,8 @@ def build_prompt(items: list[dict]) -> tuple[str, str]:
 
 
 def parse_response(text: str) -> dict | None:
+    if not text:
+        return None
     try:
         return json.loads(text)
     except json.JSONDecodeError:
@@ -100,7 +103,8 @@ def summarize(items: list[dict], api_key: str, max_retries: int = 1) -> dict | N
         except anthropic.RateLimitError as e:
             retry_after = int(e.response.headers.get("retry-after", 30))
             logger.warning(f"Rate limited, waiting {retry_after}s")
-            time.sleep(retry_after)
+            if attempt < max_retries:
+                time.sleep(retry_after)
         except Exception as e:
             logger.error(f"Claude API error (attempt {attempt + 1}): {e}")
             if attempt < max_retries:
