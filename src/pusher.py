@@ -17,14 +17,16 @@ CATEGORY_ICONS = {
 def format_message(result: dict) -> list[str]:
     today = date.today().isoformat()
     messages = []
+    first_non_empty = True
 
-    for i, category in enumerate(result["categories"]):
+    for category in result["categories"]:
         if not category["items"]:
             continue
         icon = CATEGORY_ICONS.get(category["name"], "📌")
         lines = []
-        if i == 0:
+        if first_non_empty:
             lines.append(f"🤖 AI 前沿日报 {today}\n")
+            first_non_empty = False
         lines.append(f"**{icon} {category['name']}**")
         for item in category["items"]:
             lines.append(f"• {item['summary']} [{item['title']}]({item['url']})")
@@ -37,6 +39,8 @@ def format_message(result: dict) -> list[str]:
 
 
 def split_messages(text: str, max_length: int = 4096) -> list[str]:
+    if not text:
+        return []
     if len(text) <= max_length:
         return [text]
     parts = []
@@ -80,6 +84,8 @@ def push_to_wechat(messages: list[str], webhook_url: str, max_retries: int = 2) 
                         success = True
                         break
                     logger.warning(f"WeChat API error: {data}")
+                    if attempt < max_retries:
+                        time.sleep(5)
                 except Exception as e:
                     logger.warning(f"Push failed (attempt {attempt + 1}): {e}")
                     if attempt < max_retries:

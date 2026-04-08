@@ -42,12 +42,29 @@ def test_format_message_first_has_title():
     assert "AI 前沿日报" in messages[0]
 
 
+def test_format_message_title_on_first_nonempty_category():
+    """Title header must appear even when leading categories are empty."""
+    result = {
+        "categories": [
+            {"name": "产品与应用", "items": []},
+            {"name": "开源项目", "items": [{"title": "X", "summary": "S", "url": "http://x.com"}]},
+        ],
+    }
+    messages = format_message(result)
+    assert any("AI 前沿日报" in m for m in messages), "Title must appear on first non-empty category"
+
+
 def test_split_messages_respects_limit():
     long_text = "x" * 5000
     parts = split_messages(long_text, max_length=4096)
     assert len(parts) >= 2
     for part in parts:
         assert len(part) <= 4096
+
+
+def test_split_messages_empty_string_returns_empty_list():
+    """Empty input must not produce a spurious empty part that triggers a blank POST."""
+    assert split_messages("") == []
 
 
 def test_push_to_wechat_sends_request():
@@ -72,3 +89,15 @@ def test_push_to_wechat_retries_on_failure():
             success = push_to_wechat(["test message"], "https://example.com/webhook")
     assert success is True
     assert mock_post.call_count == 2
+
+
+def test_push_to_wechat_sleeps_on_api_errcode():
+    """API-level errcode failure must sleep between retries (rate-limit safety)."""
+    err_resp = MagicMock()
+    err_resp.json.return_value = {"errcode": 45009, "errmsg": "reach api freq limit"}
+    sleep_calls = []
+    with patch("src.pusher.requests.post", return_value=err_resp):
+        with patch("src.pusher.time.sleep", side_effect=lambda n: sleep_calls.append(n)):
+            result = push_to_wechat(["test message"], "https://example.com/webhook", max_retries=2)
+    assert result is False
+    assert len(sleep_calls) == 2, "Must sleep between each API-error retry"
