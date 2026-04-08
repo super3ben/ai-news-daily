@@ -1,4 +1,3 @@
-import os
 import pytest
 from src.config import load_config
 
@@ -38,5 +37,5 @@ def test_load_config_missing_env_raises(tmp_path, monkeypatch):
     monkeypatch.delenv("TAVILY_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("WECHAT_WEBHOOK_URL", raising=False)
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError, match="TAVILY_API_KEY"):
         load_config(str(config_file))
