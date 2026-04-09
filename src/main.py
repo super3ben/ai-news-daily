@@ -3,9 +3,9 @@ import logging
 import sys
 
 from src.config import load_config
-from src.collector import collect_all
+from src.collector import collect_all, collect_github_trending
 from src.dedup import deduplicate, preprocess
-from src.summarizer import summarize, build_fallback_output
+from src.summarizer import summarize, summarize_github_trending, build_fallback_output
 from src.pusher import format_message, push_to_serverchan
 
 logger = logging.getLogger(__name__)
@@ -40,12 +40,16 @@ def run_pipeline(config_path: str = "config.yaml") -> None:
         push_to_serverchan("AI 前沿日报", "今日暂无 AI 新闻更新", config["serverchan_sendkey"])
         return
 
-    # 4. Summarize
+    # 4. Summarize news
     result = summarize(items, config["deepseek_api_key"])
 
-    # 5. Push
+    # 5. GitHub trending
+    trending_repos = collect_github_trending()
+    trending_summarized = summarize_github_trending(trending_repos, config["deepseek_api_key"])
+
+    # 6. Push
     if result:
-        messages = format_message(result)
+        messages = format_message(result, trending_repos=trending_summarized)
     else:
         logger.warning("Summarization failed, using fallback output")
         messages = [build_fallback_output(items)]
@@ -54,7 +58,7 @@ def run_pipeline(config_path: str = "config.yaml") -> None:
     body = "\n\n".join(messages)
     success = push_to_serverchan(title, body, config["serverchan_sendkey"])
 
-    # 6. Summary
+    # 7. Summary
     logger.info(
         f"=== Pipeline Complete === "
         f"Collected: {len(items)} | Push: {'OK' if success else 'FAILED'}"

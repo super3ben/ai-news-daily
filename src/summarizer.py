@@ -77,6 +77,41 @@ def build_fallback_output(items: list[dict]) -> str:
     return "\n".join(lines)
 
 
+GITHUB_PROMPT = """请为以下 GitHub 热门项目生成中文介绍。每个项目用 50-80 字说明它是什么、能做什么、为什么值得关注。
+按 star 数从高到低排列。严格按 JSON 格式输出，不要输出其他内容。
+
+项目列表：
+{repos_json}
+
+输出格式：
+{{
+  "repos": [
+    {{"name": "owner/repo", "stars": 1234, "summary": "中文介绍", "url": "链接"}}
+  ]
+}}"""
+
+
+def summarize_github_trending(repos: list[dict], api_key: str) -> list[dict] | None:
+    if not repos:
+        return None
+    client = OpenAI(base_url="https://api.deepseek.com", api_key=api_key)
+    repos_json = json.dumps(repos, ensure_ascii=False, indent=2)
+    prompt = GITHUB_PROMPT.format(repos_json=repos_json)
+    try:
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+        )
+        result = parse_response(response.choices[0].message.content)
+        if result and "repos" in result:
+            logger.info("GitHub trending summarization succeeded")
+            return result["repos"]
+    except Exception as e:
+        logger.warning(f"GitHub trending summarization failed: {e}")
+    return None
+
+
 def summarize(items: list[dict], api_key: str, max_retries: int = 2) -> dict | None:
     system_prompt, user_prompt = build_prompt(items)
     client = OpenAI(

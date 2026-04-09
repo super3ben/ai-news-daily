@@ -1,8 +1,9 @@
 # src/collector.py
 import logging
 from calendar import timegm
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
+import requests
 import feedparser
 from tavily import TavilyClient
 
@@ -62,6 +63,36 @@ def collect_search(keywords: list[str], api_key: str) -> list[dict]:
     except Exception as e:
         logger.error(f"Tavily client init failed: {e}")
     return items
+
+
+def collect_github_trending(top_n: int = 10) -> list[dict]:
+    """Fetch repos with the most stars gained recently via GitHub Search API."""
+    try:
+        today = datetime.now(timezone.utc)
+        since = (today - timedelta(days=7)).strftime("%Y-%m-%d")
+        url = "https://api.github.com/search/repositories"
+        params = {
+            "q": f"created:>{since} topic:ai OR topic:llm OR topic:machine-learning",
+            "sort": "stars",
+            "order": "desc",
+            "per_page": top_n,
+        }
+        resp = requests.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+        repos = []
+        for repo in resp.json().get("items", []):
+            repos.append({
+                "name": repo["full_name"],
+                "url": repo["html_url"],
+                "description": repo.get("description") or "",
+                "stars": repo["stargazers_count"],
+                "language": repo.get("language") or "",
+            })
+        logger.info(f"GitHub trending: collected {len(repos)} repos")
+        return repos
+    except Exception as e:
+        logger.warning(f"GitHub trending failed: {e}")
+        return []
 
 
 def collect_all(config: dict) -> list[dict]:

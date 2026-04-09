@@ -14,7 +14,7 @@ CATEGORY_ICONS = {
 }
 
 
-def format_message(result: dict) -> list[str]:
+def format_message(result: dict, trending_repos: list[dict] | None = None) -> list[str]:
     today = date.today().isoformat()
     lines = [f"# 🤖 AI 前沿日报 {today}", ""]
 
@@ -28,6 +28,18 @@ def format_message(result: dict) -> list[str]:
             lines.append(f"### [{item['title']}]({item['url']})")
             lines.append("")
             lines.append(item["summary"])
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+
+    if trending_repos:
+        lines.append("## ⭐ GitHub 本周飙升项目")
+        lines.append("")
+        for repo in trending_repos:
+            stars = repo.get("stars", 0)
+            lines.append(f"### [{repo['name']}]({repo['url']})  ⭐ {stars}")
+            lines.append("")
+            lines.append(repo["summary"])
             lines.append("")
             lines.append("---")
             lines.append("")
