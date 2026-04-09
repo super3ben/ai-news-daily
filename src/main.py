@@ -6,7 +6,7 @@ from src.config import load_config
 from src.collector import collect_all
 from src.dedup import deduplicate, preprocess
 from src.summarizer import summarize, build_fallback_output
-from src.pusher import format_message, push_to_wechat
+from src.pusher import format_message, push_to_serverchan
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +37,7 @@ def run_pipeline(config_path: str = "config.yaml") -> None:
     )
     if not items:
         logger.error("No items after dedup/preprocess")
-        pushed = push_to_wechat(["今日暂无 AI 新闻更新"], config["wechat_webhook_url"])
-        if not pushed:
-            logger.error("Push also failed for empty-result notice")
+        push_to_serverchan("AI 前沿日报", "今日暂无 AI 新闻更新", config["serverchan_sendkey"])
         return
 
     # 4. Summarize
@@ -52,7 +50,9 @@ def run_pipeline(config_path: str = "config.yaml") -> None:
         logger.warning("Summarization failed, using fallback output")
         messages = [build_fallback_output(items)]
 
-    success = push_to_wechat(messages, config["wechat_webhook_url"])
+    title = "AI 前沿日报"
+    body = "\n\n".join(messages)
+    success = push_to_serverchan(title, body, config["serverchan_sendkey"])
 
     # 6. Summary
     logger.info(

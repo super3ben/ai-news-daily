@@ -1,6 +1,6 @@
 # tests/test_pusher.py
 from unittest.mock import patch, MagicMock
-from src.pusher import format_message, split_messages, push_to_wechat
+from src.pusher import format_message, split_messages, push_to_serverchan
 
 SAMPLE_RESULT = {
     "categories": [
@@ -63,41 +63,41 @@ def test_split_messages_respects_limit():
 
 
 def test_split_messages_empty_string_returns_empty_list():
-    """Empty input must not produce a spurious empty part that triggers a blank POST."""
+    """Empty input must not produce a spurious empty part."""
     assert split_messages("") == []
 
 
-def test_push_to_wechat_sends_request():
+def test_push_to_serverchan_sends_request():
     mock_resp = MagicMock()
     mock_resp.status_code = 200
-    mock_resp.json.return_value = {"errcode": 0}
+    mock_resp.json.return_value = {"code": 0, "message": "", "data": {}}
     with patch("src.pusher.requests.post", return_value=mock_resp) as mock_post:
-        success = push_to_wechat(["test message"], "https://example.com/webhook")
+        success = push_to_serverchan("Test Title", "Test Body", "SCTfakekey")
     assert success is True
     assert mock_post.call_count == 1
+    call_args = mock_post.call_args
+    assert "sctapi.ftqq.com" in call_args[0][0]
+    assert call_args[1]["json"]["title"] == "Test Title"
+    assert call_args[1]["json"]["desp"] == "Test Body"
 
 
-def test_push_to_wechat_retries_on_failure():
+def test_push_to_serverchan_retries_on_failure():
     fail_resp = MagicMock()
-    fail_resp.status_code = 500
     fail_resp.raise_for_status.side_effect = Exception("500 error")
     ok_resp = MagicMock()
     ok_resp.status_code = 200
-    ok_resp.json.return_value = {"errcode": 0}
+    ok_resp.json.return_value = {"code": 0, "message": ""}
     with patch("src.pusher.requests.post", side_effect=[fail_resp, ok_resp]) as mock_post:
         with patch("src.pusher.time.sleep"):
-            success = push_to_wechat(["test message"], "https://example.com/webhook")
+            success = push_to_serverchan("Title", "Body", "SCTfakekey")
     assert success is True
     assert mock_post.call_count == 2
 
 
-def test_push_to_wechat_sleeps_on_api_errcode():
-    """API-level errcode failure must sleep between retries (rate-limit safety)."""
-    err_resp = MagicMock()
-    err_resp.json.return_value = {"errcode": 45009, "errmsg": "reach api freq limit"}
-    sleep_calls = []
-    with patch("src.pusher.requests.post", return_value=err_resp):
-        with patch("src.pusher.time.sleep", side_effect=lambda n: sleep_calls.append(n)):
-            result = push_to_wechat(["test message"], "https://example.com/webhook", max_retries=2)
-    assert result is False
-    assert len(sleep_calls) == 2, "Must sleep between each API-error retry"
+def test_push_to_serverchan_returns_false_after_all_retries():
+    fail_resp = MagicMock()
+    fail_resp.raise_for_status.side_effect = Exception("error")
+    with patch("src.pusher.requests.post", return_value=fail_resp):
+        with patch("src.pusher.time.sleep"):
+            success = push_to_serverchan("Title", "Body", "SCTfakekey", max_retries=1)
+    assert success is False

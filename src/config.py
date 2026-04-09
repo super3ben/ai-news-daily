@@ -8,7 +8,7 @@ def load_config(config_path: str = "config.yaml") -> dict:
 
     config["tavily_api_key"] = os.environ["TAVILY_API_KEY"]
     config["anthropic_api_key"] = os.environ["ANTHROPIC_API_KEY"]
-    config["wechat_webhook_url"] = os.environ["WECHAT_WEBHOOK_URL"]
+    config["serverchan_sendkey"] = os.environ["SERVERCHAN_SENDKEY"]
 
     config.setdefault("max_items_per_category", 5)
     config.setdefault("max_age_days", 3)

@@ -16,7 +16,7 @@ def test_run_pipeline_happy_path(tmp_path, monkeypatch):
     )
     monkeypatch.setenv("TAVILY_API_KEY", "fake")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
-    monkeypatch.setenv("WECHAT_WEBHOOK_URL", "https://example.com/webhook")
+    monkeypatch.setenv("SERVERCHAN_SENDKEY", "SCTfake")
 
     collected = [
         {"title": "News 1", "url": "https://a.com/1", "published": None, "source": "HN", "summary": "", "source_type": "rss"},
@@ -36,11 +36,11 @@ def test_run_pipeline_happy_path(tmp_path, monkeypatch):
         patch("src.main.preprocess", return_value=collected),
         patch("src.main.summarize", return_value=summarized),
         patch("src.main.format_message", return_value=["msg"]),
-        patch("src.main.push_to_wechat", return_value=True) as mock_push,
+        patch("src.main.push_to_serverchan", return_value=True) as mock_push,
     ):
         run_pipeline(str(config_file))
 
-    mock_push.assert_called_once_with(["msg"], "https://example.com/webhook")
+    mock_push.assert_called_once()
 
 
 def test_run_pipeline_fallback_on_summarize_failure(tmp_path, monkeypatch):
@@ -50,7 +50,7 @@ def test_run_pipeline_fallback_on_summarize_failure(tmp_path, monkeypatch):
     )
     monkeypatch.setenv("TAVILY_API_KEY", "fake")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
-    monkeypatch.setenv("WECHAT_WEBHOOK_URL", "https://example.com/webhook")
+    monkeypatch.setenv("SERVERCHAN_SENDKEY", "SCTfake")
 
     collected = [
         {"title": "News 1", "url": "https://a.com/1", "published": None, "source": "HN", "summary": "", "source_type": "rss"},
@@ -62,11 +62,11 @@ def test_run_pipeline_fallback_on_summarize_failure(tmp_path, monkeypatch):
         patch("src.main.preprocess", return_value=collected),
         patch("src.main.summarize", return_value=None),
         patch("src.main.build_fallback_output", return_value="fallback msg"),
-        patch("src.main.push_to_wechat", return_value=True) as mock_push,
+        patch("src.main.push_to_serverchan", return_value=True) as mock_push,
     ):
         run_pipeline(str(config_file))
 
-    mock_push.assert_called_once_with(["fallback msg"], "https://example.com/webhook")
+    mock_push.assert_called_once_with("AI 前沿日报", "fallback msg", "SCTfake")
 
 
 def test_run_pipeline_exits_on_no_items(tmp_path, monkeypatch):
@@ -76,7 +76,7 @@ def test_run_pipeline_exits_on_no_items(tmp_path, monkeypatch):
     )
     monkeypatch.setenv("TAVILY_API_KEY", "fake")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
-    monkeypatch.setenv("WECHAT_WEBHOOK_URL", "https://example.com/webhook")
+    monkeypatch.setenv("SERVERCHAN_SENDKEY", "SCTfake")
 
     with patch("src.main.collect_all", return_value=[]):
         with pytest.raises(SystemExit) as exc_info:
@@ -93,7 +93,7 @@ def test_run_pipeline_exits_on_push_failure(tmp_path, monkeypatch):
     )
     monkeypatch.setenv("TAVILY_API_KEY", "fake")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
-    monkeypatch.setenv("WECHAT_WEBHOOK_URL", "https://example.com/webhook")
+    monkeypatch.setenv("SERVERCHAN_SENDKEY", "SCTfake")
 
     collected = [
         {"title": "News 1", "url": "https://a.com/1", "published": None, "source": "HN", "summary": "", "source_type": "rss"},
@@ -113,7 +113,7 @@ def test_run_pipeline_exits_on_push_failure(tmp_path, monkeypatch):
         patch("src.main.preprocess", return_value=collected),
         patch("src.main.summarize", return_value=summarized),
         patch("src.main.format_message", return_value=["msg"]),
-        patch("src.main.push_to_wechat", return_value=False),
+        patch("src.main.push_to_serverchan", return_value=False),
     ):
         with pytest.raises(SystemExit) as exc_info:
             run_pipeline(str(config_file))

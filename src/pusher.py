@@ -65,32 +65,25 @@ def split_messages(text: str, max_length: int = 4096) -> list[str]:
     return parts
 
 
-def push_to_wechat(messages: list[str], webhook_url: str, max_retries: int = 2) -> bool:
-    all_success = True
-    for msg in messages:
-        parts = split_messages(msg)
-        for part in parts:
-            payload = {
-                "msgtype": "markdown",
-                "markdown": {"content": part},
-            }
-            success = False
-            for attempt in range(max_retries + 1):
-                try:
-                    resp = requests.post(webhook_url, json=payload, timeout=10)
-                    resp.raise_for_status()
-                    data = resp.json()
-                    if data.get("errcode", 0) == 0:
-                        success = True
-                        break
-                    logger.warning(f"WeChat API error: {data}")
-                    if attempt < max_retries:
-                        time.sleep(5)
-                except Exception as e:
-                    logger.warning(f"Push failed (attempt {attempt + 1}): {e}")
-                    if attempt < max_retries:
-                        time.sleep(5)
-            if not success:
-                logger.error(f"Push failed after {max_retries + 1} attempts")
-                all_success = False
-    return all_success
+def push_to_serverchan(title: str, body: str, sendkey: str, max_retries: int = 2) -> bool:
+    url = f"https://sctapi.ftqq.com/{sendkey}.send"
+    payload = {"title": title, "desp": body}
+
+    for attempt in range(max_retries + 1):
+        try:
+            resp = requests.post(url, json=payload, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("code", -1) == 0:
+                logger.info("Server酱 push succeeded")
+                return True
+            logger.warning(f"Server酱 API error: {data}")
+            if attempt < max_retries:
+                time.sleep(5)
+        except Exception as e:
+            logger.warning(f"Push failed (attempt {attempt + 1}): {e}")
+            if attempt < max_retries:
+                time.sleep(5)
+
+    logger.error(f"Push failed after {max_retries + 1} attempts")
+    return False

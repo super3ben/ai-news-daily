@@ -24,11 +24,11 @@ def test_load_config_returns_env_secrets(tmp_path, monkeypatch):
     config_file.write_text("rss_sources: []\nsearch_keywords: []\n")
     monkeypatch.setenv("TAVILY_API_KEY", "test_tavily_key")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
-    monkeypatch.setenv("WECHAT_WEBHOOK_URL", "https://example.com/webhook")
+    monkeypatch.setenv("SERVERCHAN_SENDKEY", "SCTtestkey")
     config = load_config(str(config_file))
     assert config["tavily_api_key"] == "test_tavily_key"
     assert config["anthropic_api_key"] == "test_anthropic_key"
-    assert config["wechat_webhook_url"] == "https://example.com/webhook"
+    assert config["serverchan_sendkey"] == "SCTtestkey"
 
 
 def test_load_config_missing_env_raises(tmp_path, monkeypatch):
@@ -36,6 +36,6 @@ def test_load_config_missing_env_raises(tmp_path, monkeypatch):
     config_file.write_text("rss_sources: []\nsearch_keywords: []\n")
     monkeypatch.delenv("TAVILY_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("WECHAT_WEBHOOK_URL", raising=False)
+    monkeypatch.delenv("SERVERCHAN_SENDKEY", raising=False)
     with pytest.raises(KeyError, match="TAVILY_API_KEY"):
         load_config(str(config_file))

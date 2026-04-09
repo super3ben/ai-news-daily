@@ -10,4 +10,4 @@ def default_env_vars(monkeypatch):
     """
     monkeypatch.setenv("TAVILY_API_KEY", "default_test_tavily_key")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "default_test_anthropic_key")
-    monkeypatch.setenv("WECHAT_WEBHOOK_URL", "https://default.example.com/webhook")
+    monkeypatch.setenv("SERVERCHAN_SENDKEY", "SCT_default_test_key")
