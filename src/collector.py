@@ -72,7 +72,7 @@ def collect_github_trending(top_n: int = 10) -> list[dict]:
         since = (today - timedelta(days=7)).strftime("%Y-%m-%d")
         url = "https://api.github.com/search/repositories"
         params = {
-            "q": f"created:>{since} topic:ai OR topic:llm OR topic:machine-learning",
+            "q": f"created:>{since} (topic:ai OR topic:llm OR topic:machine-learning OR topic:gpt OR topic:deep-learning)",
             "sort": "stars",
             "order": "desc",
             "per_page": top_n,
