@@ -9,12 +9,15 @@ from tavily import TavilyClient
 logger = logging.getLogger(__name__)
 
 
+MAX_ENTRIES_PER_FEED = 30
+
+
 def collect_rss(sources: list[dict]) -> list[dict]:
     items = []
     for source in sources:
         try:
             feed = feedparser.parse(source["url"])
-            for entry in feed.entries:
+            for entry in feed.entries[:MAX_ENTRIES_PER_FEED]:
                 try:
                     published = None
                     if hasattr(entry, "published_parsed") and entry.published_parsed:
