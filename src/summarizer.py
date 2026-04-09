@@ -4,8 +4,7 @@ import logging
 import time
 from datetime import date
 
-from google import genai
-from google.genai import types
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -77,31 +76,34 @@ def build_fallback_output(items: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def summarize(items: list[dict], api_key: str, max_retries: int = 3) -> dict | None:
+def summarize(items: list[dict], api_key: str, max_retries: int = 2) -> dict | None:
     system_prompt, user_prompt = build_prompt(items)
-    client = genai.Client(api_key=api_key)
-    full_prompt = system_prompt + "\n\n" + user_prompt
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
 
     for attempt in range(max_retries + 1):
         try:
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=full_prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                ),
+            response = client.chat.completions.create(
+                model="google/gemini-2.0-flash-exp:free",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={"type": "json_object"},
             )
-            result = parse_response(response.text)
+            result = parse_response(response.choices[0].message.content)
             if result:
-                logger.info("Gemini summarization succeeded")
+                logger.info("OpenRouter summarization succeeded")
                 return result
             logger.warning(f"JSON parse failed (attempt {attempt + 1})")
         except Exception as e:
-            logger.error(f"Gemini API error (attempt {attempt + 1}): {e}")
+            logger.error(f"OpenRouter API error (attempt {attempt + 1}): {e}")
             if attempt < max_retries:
                 wait = 15 * (attempt + 1)
                 logger.info(f"Waiting {wait}s before retry...")
                 time.sleep(wait)
 
-    logger.error("Gemini summarization failed after retries")
+    logger.error("Summarization failed after retries")
     return None

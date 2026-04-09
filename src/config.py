@@ -7,7 +7,7 @@ def load_config(config_path: str = "config.yaml") -> dict:
         config = yaml.safe_load(f)
 
     config["tavily_api_key"] = os.environ["TAVILY_API_KEY"]
-    config["gemini_api_key"] = os.environ["GEMINI_API_KEY"]
+    config["openrouter_api_key"] = os.environ["OPENROUTER_API_KEY"]
     config["serverchan_sendkey"] = os.environ["SERVERCHAN_SENDKEY"]
 
     config.setdefault("max_items_per_category", 5)

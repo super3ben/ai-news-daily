@@ -76,14 +76,20 @@ def test_build_fallback_output():
     assert "AI 摘要不可用" in result
 
 
-def test_summarize_calls_gemini_api():
+def test_summarize_calls_openrouter_api():
+    mock_message = MagicMock()
+    mock_message.content = VALID_RESPONSE
+
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+
     mock_response = MagicMock()
-    mock_response.text = VALID_RESPONSE
+    mock_response.choices = [mock_choice]
 
     mock_client = MagicMock()
-    mock_client.models.generate_content.return_value = mock_response
+    mock_client.chat.completions.create.return_value = mock_response
 
-    with patch("src.summarizer.genai.Client", return_value=mock_client):
+    with patch("src.summarizer.OpenAI", return_value=mock_client):
         result = summarize(SAMPLE_ITEMS, api_key="fake_key")
     assert result is not None
     assert "categories" in result
@@ -91,16 +97,20 @@ def test_summarize_calls_gemini_api():
 
 
 def test_summarize_retries_on_api_failure():
+    mock_message = MagicMock()
+    mock_message.content = VALID_RESPONSE
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
     mock_response = MagicMock()
-    mock_response.text = VALID_RESPONSE
+    mock_response.choices = [mock_choice]
 
     mock_client = MagicMock()
-    mock_client.models.generate_content.side_effect = [
+    mock_client.chat.completions.create.side_effect = [
         Exception("API error"),
         mock_response,
     ]
 
-    with patch("src.summarizer.genai.Client", return_value=mock_client):
+    with patch("src.summarizer.OpenAI", return_value=mock_client):
         with patch("src.summarizer.time.sleep"):
             result = summarize(SAMPLE_ITEMS, api_key="fake_key")
     assert result is not None
@@ -109,9 +119,9 @@ def test_summarize_retries_on_api_failure():
 
 def test_summarize_returns_none_after_all_retries_fail():
     mock_client = MagicMock()
-    mock_client.models.generate_content.side_effect = Exception("API error")
+    mock_client.chat.completions.create.side_effect = Exception("API error")
 
-    with patch("src.summarizer.genai.Client", return_value=mock_client):
+    with patch("src.summarizer.OpenAI", return_value=mock_client):
         with patch("src.summarizer.time.sleep"):
             result = summarize(SAMPLE_ITEMS, api_key="fake_key")
     assert result is None

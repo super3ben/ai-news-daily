@@ -9,5 +9,5 @@ def default_env_vars(monkeypatch):
     Tests that need missing env vars should use monkeypatch.delenv() to remove.
     """
     monkeypatch.setenv("TAVILY_API_KEY", "default_test_tavily_key")
-    monkeypatch.setenv("GEMINI_API_KEY", "default_test_gemini_key")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "default_test_openrouter_key")
     monkeypatch.setenv("SERVERCHAN_SENDKEY", "SCT_default_test_key")
