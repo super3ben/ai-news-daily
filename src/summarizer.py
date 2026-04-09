@@ -77,7 +77,7 @@ def build_fallback_output(items: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def summarize(items: list[dict], api_key: str, max_retries: int = 1) -> dict | None:
+def summarize(items: list[dict], api_key: str, max_retries: int = 3) -> dict | None:
     system_prompt, user_prompt = build_prompt(items)
     client = genai.Client(api_key=api_key)
     full_prompt = system_prompt + "\n\n" + user_prompt
@@ -99,7 +99,9 @@ def summarize(items: list[dict], api_key: str, max_retries: int = 1) -> dict | N
         except Exception as e:
             logger.error(f"Gemini API error (attempt {attempt + 1}): {e}")
             if attempt < max_retries:
-                time.sleep(10)
+                wait = 15 * (attempt + 1)
+                logger.info(f"Waiting {wait}s before retry...")
+                time.sleep(wait)
 
     logger.error("Gemini summarization failed after retries")
     return None
