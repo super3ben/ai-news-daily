@@ -41,7 +41,7 @@ def run_pipeline(config_path: str = "config.yaml") -> None:
         return
 
     # 4. Summarize
-    result = summarize(items, config["anthropic_api_key"])
+    result = summarize(items, config["gemini_api_key"])
 
     # 5. Push
     if result:

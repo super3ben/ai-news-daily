@@ -4,7 +4,8 @@ import logging
 import time
 from datetime import date
 
-import anthropic
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,6 @@ def parse_response(text: str) -> dict | None:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        # Try to extract JSON from response
         start = text.find("{")
         end = text.rfind("}") + 1
         if start != -1 and end > start:
@@ -79,36 +79,27 @@ def build_fallback_output(items: list[dict]) -> str:
 
 def summarize(items: list[dict], api_key: str, max_retries: int = 1) -> dict | None:
     system_prompt, user_prompt = build_prompt(items)
-    client = anthropic.Anthropic(api_key=api_key)
+    client = genai.Client(api_key=api_key)
+    full_prompt = system_prompt + "\n\n" + user_prompt
 
     for attempt in range(max_retries + 1):
         try:
-            message = client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=4096,
-                system=system_prompt,
-                messages=[
-                    {"role": "user", "content": user_prompt},
-                    {"role": "assistant", "content": "{"},
-                ],
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=full_prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                ),
             )
-            response_text = message.content[0].text
-            # The assistant prefill was "{", so the response continues from there.
-            # Try with prefill prepended first; fall back to raw text if that fails.
-            result = parse_response("{" + response_text) or parse_response(response_text)
+            result = parse_response(response.text)
             if result:
-                logger.info("Claude summarization succeeded")
+                logger.info("Gemini summarization succeeded")
                 return result
             logger.warning(f"JSON parse failed (attempt {attempt + 1})")
-        except anthropic.RateLimitError as e:
-            retry_after = int(e.response.headers.get("retry-after", 30))
-            logger.warning(f"Rate limited, waiting {retry_after}s")
-            if attempt < max_retries:
-                time.sleep(retry_after)
         except Exception as e:
-            logger.error(f"Claude API error (attempt {attempt + 1}): {e}")
+            logger.error(f"Gemini API error (attempt {attempt + 1}): {e}")
             if attempt < max_retries:
                 time.sleep(10)
 
-    logger.error("Claude summarization failed after retries")
+    logger.error("Gemini summarization failed after retries")
     return None
