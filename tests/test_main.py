@@ -15,7 +15,7 @@ def test_run_pipeline_happy_path(tmp_path, monkeypatch):
         "max_items_per_category: 5\n"
     )
     monkeypatch.setenv("TAVILY_API_KEY", "fake")
-    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "fake")
     monkeypatch.setenv("SERVERCHAN_SENDKEY", "SCTfake")
 
     collected = [
@@ -49,7 +49,7 @@ def test_run_pipeline_fallback_on_summarize_failure(tmp_path, monkeypatch):
         "rss_sources: []\nsearch_keywords: []\n"
     )
     monkeypatch.setenv("TAVILY_API_KEY", "fake")
-    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "fake")
     monkeypatch.setenv("SERVERCHAN_SENDKEY", "SCTfake")
 
     collected = [
@@ -75,7 +75,7 @@ def test_run_pipeline_exits_on_no_items(tmp_path, monkeypatch):
         "rss_sources: []\nsearch_keywords: []\n"
     )
     monkeypatch.setenv("TAVILY_API_KEY", "fake")
-    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "fake")
     monkeypatch.setenv("SERVERCHAN_SENDKEY", "SCTfake")
 
     with patch("src.main.collect_all", return_value=[]):
@@ -92,7 +92,7 @@ def test_run_pipeline_exits_on_push_failure(tmp_path, monkeypatch):
         "rss_sources: []\nsearch_keywords: []\n"
     )
     monkeypatch.setenv("TAVILY_API_KEY", "fake")
-    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "fake")
     monkeypatch.setenv("SERVERCHAN_SENDKEY", "SCTfake")
 
     collected = [

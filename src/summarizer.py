@@ -76,42 +76,32 @@ def build_fallback_output(items: list[dict]) -> str:
     return "\n".join(lines)
 
 
-FREE_MODELS = [
-    "google/gemma-3-27b-it:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "deepseek/deepseek-chat-v3-0324:free",
-    "qwen/qwen3-30b-a3b:free",
-]
-
-
 def summarize(items: list[dict], api_key: str, max_retries: int = 2) -> dict | None:
     system_prompt, user_prompt = build_prompt(items)
     client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
+        base_url="https://api.deepseek.com",
         api_key=api_key,
     )
 
-    for model in FREE_MODELS:
-        for attempt in range(max_retries + 1):
-            try:
-                logger.info(f"Trying model: {model} (attempt {attempt + 1})")
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                )
-                result = parse_response(response.choices[0].message.content)
-                if result:
-                    logger.info(f"Summarization succeeded with {model}")
-                    return result
-                logger.warning(f"JSON parse failed (attempt {attempt + 1})")
-            except Exception as e:
-                logger.warning(f"{model} error (attempt {attempt + 1}): {e}")
-                if attempt < max_retries:
-                    time.sleep(10)
-                break  # try next model on error
+    for attempt in range(max_retries + 1):
+        try:
+            response = client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={"type": "json_object"},
+            )
+            result = parse_response(response.choices[0].message.content)
+            if result:
+                logger.info("DeepSeek summarization succeeded")
+                return result
+            logger.warning(f"JSON parse failed (attempt {attempt + 1})")
+        except Exception as e:
+            logger.error(f"DeepSeek API error (attempt {attempt + 1}): {e}")
+            if attempt < max_retries:
+                time.sleep(10)
 
-    logger.error("All models failed")
+    logger.error("Summarization failed after retries")
     return None
