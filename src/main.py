@@ -37,7 +37,7 @@ def run_pipeline(config_path: str = "config.yaml") -> None:
     )
     if not items:
         logger.error("No items after dedup/preprocess")
-        push_to_serverchan("AI 前沿日报", "今日暂无 AI 新闻更新", config["serverchan_sendkey"])
+        push_to_serverchan("AI 前沿日报", "今日暂无 AI 新闻更新", config["serverchan_sendkey"], config["serverchan_api_url"])
         return
 
     # 4. Summarize news
@@ -56,7 +56,7 @@ def run_pipeline(config_path: str = "config.yaml") -> None:
 
     title = "AI 前沿日报"
     body = "\n\n".join(messages)
-    success = push_to_serverchan(title, body, config["serverchan_sendkey"])
+    success = push_to_serverchan(title, body, config["serverchan_sendkey"], config["serverchan_api_url"])
 
     # 7. Summary
     logger.info(

@@ -9,6 +9,9 @@ def load_config(config_path: str = "config.yaml") -> dict:
     config["tavily_api_key"] = os.environ["TAVILY_API_KEY"]
     config["deepseek_api_key"] = os.environ["DEEPSEEK_API_KEY"]
     config["serverchan_sendkey"] = os.environ["SERVERCHAN_SENDKEY"]
+    config["serverchan_api_url"] = os.environ.get(
+        "SERVERCHAN_API_URL", "https://sctapi.ftqq.com"
+    )
 
     config.setdefault("max_items_per_category", 5)
     config.setdefault("max_age_days", 3)
