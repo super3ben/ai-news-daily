@@ -76,9 +76,9 @@ def test_push_to_serverchan_sends_request():
     assert success is True
     assert mock_post.call_count == 1
     call_args = mock_post.call_args
-    assert "sctapi.ftqq.com" in call_args[0][0] or "push.ft07.com" in call_args[0][0]
-    assert call_args[1]["json"]["title"] == "Test Title"
-    assert call_args[1]["json"]["desp"] == "Test Body"
+    assert "sctapi.ftqq.com" in call_args[0][0]
+    assert call_args[1]["data"]["title"] == "Test Title"
+    assert call_args[1]["data"]["desp"] == "Test Body"
 
 
 def test_push_to_serverchan_retries_on_failure():

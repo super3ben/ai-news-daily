@@ -79,10 +79,8 @@ def split_messages(text: str, max_length: int = 4096) -> list[str]:
     return parts
 
 
-def push_to_serverchan(
-    title: str, body: str, sendkey: str, api_url: str = "https://sctapi.ftqq.com", max_retries: int = 2
-) -> bool:
-    url = f"{api_url}/{sendkey}.send"
+def push_to_serverchan(title: str, body: str, sendkey: str, max_retries: int = 2) -> bool:
+    url = f"https://sctapi.ftqq.com/{sendkey}.send"
     payload = {"title": title, "desp": body}
 
     for attempt in range(max_retries + 1):
