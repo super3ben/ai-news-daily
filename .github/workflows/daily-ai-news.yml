@@ -1,7 +1,9 @@
 name: AI News Daily
 
 on:
-  workflow_dispatch:  # triggered by cron-job.org daily at UTC 01:00
+  schedule:
+    - cron: '0 1 * * *'  # UTC 01:00 = 北京时间 09:00
+  workflow_dispatch:
 
 jobs:
   daily-news:
