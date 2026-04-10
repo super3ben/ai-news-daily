@@ -87,13 +87,12 @@ def push_to_serverchan(
 
     for attempt in range(max_retries + 1):
         try:
-            resp = requests.post(url, json=payload, timeout=10)
-            resp.raise_for_status()
+            resp = requests.post(url, json=payload, timeout=30)
             data = resp.json()
             if data.get("code", -1) == 0:
                 logger.info("Server酱 push succeeded")
                 return True
-            logger.warning(f"Server酱 API error: {data}")
+            logger.warning(f"Server酱 API error (HTTP {resp.status_code}): {data}")
             if attempt < max_retries:
                 time.sleep(5)
         except Exception as e:

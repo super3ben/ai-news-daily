@@ -6,7 +6,7 @@ from src.config import load_config
 from src.collector import collect_all, collect_github_trending
 from src.dedup import deduplicate, preprocess
 from src.summarizer import summarize, summarize_github_trending, build_fallback_output
-from src.pusher import format_message, push_to_serverchan
+from src.pusher import format_message, push_to_serverchan, split_messages
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,13 @@ def run_pipeline(config_path: str = "config.yaml") -> None:
 
     title = "AI 前沿日报"
     body = "\n\n".join(messages)
-    success = push_to_serverchan(title, body, config["serverchan_sendkey"], config["serverchan_api_url"])
+    parts = split_messages(body)
+    logger.info(f"Message length: {len(body)} chars, split into {len(parts)} part(s)")
+    success = True
+    for i, part in enumerate(parts):
+        part_title = title if i == 0 else f"{title} ({i + 1}/{len(parts)})"
+        if not push_to_serverchan(part_title, part, config["serverchan_sendkey"], config["serverchan_api_url"]):
+            success = False
 
     # 7. Summary
     logger.info(
