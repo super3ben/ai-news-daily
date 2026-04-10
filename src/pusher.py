@@ -87,7 +87,8 @@ def push_to_serverchan(
 
     for attempt in range(max_retries + 1):
         try:
-            resp = requests.post(url, json=payload, timeout=30)
+            resp = requests.post(url, data=payload, timeout=30)
+            logger.info(f"Server酱 response (HTTP {resp.status_code}): {resp.text[:500]}")
             data = resp.json()
             if data.get("code", -1) == 0:
                 logger.info("Server酱 push succeeded")
