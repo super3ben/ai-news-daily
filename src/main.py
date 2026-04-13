@@ -5,10 +5,13 @@ import sys
 from src.config import load_config
 from src.collector import collect_all, collect_github_trending
 from src.dedup import deduplicate, preprocess
+from src.history import load_history, filter_new, save_history
 from src.summarizer import summarize, summarize_github_trending, build_fallback_output
 from src.pusher import format_message, push_to_serverchan
 
 logger = logging.getLogger(__name__)
+
+HISTORY_PATH = "data/pushed_urls.json"
 
 
 def run_pipeline(config_path: str = "config.yaml") -> None:
@@ -40,11 +43,20 @@ def run_pipeline(config_path: str = "config.yaml") -> None:
         push_to_serverchan("AI 前沿日报", "今日暂无 AI 新闻更新", config["serverchan_sendkey"])
         return
 
+    # 3b. Cross-run dedup via persistent history
+    history = load_history(HISTORY_PATH)
+    items = filter_new(items, history)
+    if not items:
+        logger.info("All items already pushed previously; nothing new today")
+        push_to_serverchan("AI 前沿日报", "今日暂无新的 AI 新闻更新", config["serverchan_sendkey"])
+        return
+
     # 4. Summarize news
     result = summarize(items, config["deepseek_api_key"])
 
     # 5. GitHub trending
     trending_repos = collect_github_trending()
+    trending_repos = filter_new(trending_repos, history)
     trending_summarized = summarize_github_trending(trending_repos, config["deepseek_api_key"])
 
     # 6. Push
@@ -57,6 +69,10 @@ def run_pipeline(config_path: str = "config.yaml") -> None:
     title = "AI 前沿日报"
     body = "\n\n".join(messages)
     success = push_to_serverchan(title, body, config["serverchan_sendkey"])
+
+    # 6b. Persist history only if push succeeded
+    if success:
+        save_history(HISTORY_PATH, history, items + list(trending_repos or []))
 
     # 7. Summary
     logger.info(
